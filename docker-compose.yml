@@ -1,0 +1,89 @@
+# Usar una versión más reciente del formato Compose (opcional pero recomendado)
+version: '3.8' 
+
+services:
+  sharelatex:
+    image: sharelatex/sharelatex # Imagen oficial de Overleaf Community Edition
+    container_name: sharelatex
+    restart: always
+    depends_on:
+      # Esperar a que MongoDB esté saludable (replica set inicializado y listo)
+      mongo:
+        condition: service_healthy 
+      # Esperar a que Redis simplemente haya iniciado (es rápido)
+      redis:
+        condition: service_started 
+    # NO mapear puertos aquí. Coolify lo gestionará a través de su proxy inverso.
+    # ports:
+    #  - '80:80' # <- ELIMINADO
+    stop_grace_period: 60s # Tiempo para que se detenga ordenadamente
+    volumes:
+      # Usar un volumen nombrado gestionado por Docker/Coolify para los datos de Overleaf
+      - sharelatex_data:/var/lib/overleaf 
+    environment:
+      OVERLEAF_APP_NAME: 'Overleaf Community Edition'
+      # La URL de conexión usa el nombre del servicio 'mongo' y el nombre del replica set
+      OVERLEAF_MONGO_URL: 'mongodb://mongo/sharelatex?replicaSet=overleaf' # Añadir ?replicaSet=overleaf
+      OVERLEAF_REDIS_HOST: redis # Nombre del servicio redis
+      REDIS_HOST: redis # Variable redundante, pero a veces necesaria por compatibilidad
+      ENABLED_LINKED_FILE_TYPES: 'project_file,project_output_file'
+      ENABLE_CONVERSIONS: 'true'
+      EMAIL_CONFIRMATION_DISABLED: 'true' # Simplifica la configuración inicial
+      SANDBOXED_COMPILES: 'true' # Habilitar compilaciones en contenedores separados
+      # Rutas para compilaciones DENTRO del volumen persistente de Overleaf
+      SANDBOXED_COMPILES_HOST_DIR_COMPILES: '/var/lib/overleaf/data/compiles' 
+      SANDBOXED_COMPILES_HOST_DIR_OUTPUT: '/var/lib/overleaf/data/output'
+      DOCKER_RUNNER: 'true' # Necesario para SANDBOXED_COMPILES
+      SANDBOXED_COMPILES_SIBLING_CONTAINERS: 'true' # Necesario para SANDBOXED_COMPILES
+      # SHARELATEX_APP_URL: # Comentado por defecto, Coolify debería manejar la URL base. Descomenta si tienes problemas de URL.
+    networks:
+      # Conectar al network definido abajo
+      - overleaf_network
+
+  mongo:
+    image: 'mongo:6.0' # Imagen de MongoDB
+    container_name: mongo
+    restart: always
+    # Comando para iniciar MongoDB como un replica set y escuchar en todas las IPs dentro del contenedor
+    command: mongod --replSet overleaf --bind_ip_all 
+    volumes:
+      # Usar un volumen nombrado para los datos de MongoDB
+      - mongo_data:/data/db 
+      # Montar el script de inicialización del replica set (ASEGÚRATE QUE ESTE ARCHIVO EXISTE EN TU REPO)
+      - ./bin/shared/mongodb-init-replica-set.js:/docker-entrypoint-initdb.d/mongodb-init-replica-set.js:ro # :ro = read-only
+    environment:
+      MONGO_INITDB_DATABASE: sharelatex # Base de datos a crear inicialmente
+    # ELIMINADO: extra_hosts no es necesario y puede causar problemas
+    # extra_hosts:
+    #  - 'mongo:127.0.0.1' 
+    healthcheck:
+      # Healthcheck que verifica si se puede conectar (mongosh) y obtener estadísticas
+      # Aumentamos los reintentos y añadimos start_period para dar tiempo a la inicialización del replica set
+      test: "echo 'db.stats().ok' | mongosh --host localhost --port 27017 --quiet" 
+      interval: 10s
+      timeout: 10s
+      retries: 15 # Aumentado para dar más margen
+      start_period: 45s # Tiempo de gracia inicial antes de empezar a chequear
+    networks:
+      - overleaf_network
+
+  redis:
+    image: 'redis:6.2' # Imagen de Redis
+    container_name: redis
+    restart: always
+    volumes:
+      # Usar un volumen nombrado para los datos de Redis (opcional pero buena práctica)
+      - redis_data:/data 
+    networks:
+      - overleaf_network
+
+# Definir los volúmenes nombrados (serán gestionados por Docker/Coolify)
+volumes:
+  sharelatex_data:
+  mongo_data:
+  redis_data:
+
+# Definir una red personalizada (buena práctica para aislar los contenedores)
+networks:
+  overleaf_network:
+    driver: bridge 
