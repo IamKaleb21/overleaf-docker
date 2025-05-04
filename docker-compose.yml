@@ -31,12 +31,18 @@ services:
       ENABLED_LINKED_FILE_TYPES: 'project_file,project_output_file'
       ENABLE_CONVERSIONS: 'true'
       EMAIL_CONFIRMATION_DISABLED: 'true' # Simplifica la configuración inicial
-      SANDBOXED_COMPILES: 'false' # Habilitar compilaciones en contenedores separados
+      
+      SANDBOXED_COMPILES: 'true' 
+      DOCKER_RUNNER: 'true' # Necesaria para sandbox
+      SANDBOXED_COMPILES_SIBLING_CONTAINERS: 'true' # Necesaria para sandbox con socket
+      # --- Variables para la imagen TeX Live ---
+      TEXLIVE_IMAGE_NAME: 'overleaf/texlive-full' # Imagen oficial de Overleaf
+      TEXLIVE_IMAGE_TAG: 'latest'           # O un año como '2024', '2023', etc.
+
       # Rutas para compilaciones DENTRO del volumen persistente de Overleaf
       SANDBOXED_COMPILES_HOST_DIR_COMPILES: '/var/lib/overleaf/data/compiles' 
       SANDBOXED_COMPILES_HOST_DIR_OUTPUT: '/var/lib/overleaf/data/output'
-      DOCKER_RUNNER: 'true' # Necesario para SANDBOXED_COMPILES
-      SANDBOXED_COMPILES_SIBLING_CONTAINERS: 'true' # Necesario para SANDBOXED_COMPILES
+
       # SHARELATEX_APP_URL: # Comentado por defecto, Coolify debería manejar la URL base. Descomenta si tienes problemas de URL.
     networks:
       # Conectar al network definido abajo
