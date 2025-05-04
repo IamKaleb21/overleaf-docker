@@ -31,7 +31,7 @@ services:
       ENABLED_LINKED_FILE_TYPES: 'project_file,project_output_file'
       ENABLE_CONVERSIONS: 'true'
       EMAIL_CONFIRMATION_DISABLED: 'true' # Simplifica la configuración inicial
-      SANDBOXED_COMPILES: 'true' # Habilitar compilaciones en contenedores separados
+      SANDBOXED_COMPILES: 'false' # Habilitar compilaciones en contenedores separados
       # Rutas para compilaciones DENTRO del volumen persistente de Overleaf
       SANDBOXED_COMPILES_HOST_DIR_COMPILES: '/var/lib/overleaf/data/compiles' 
       SANDBOXED_COMPILES_HOST_DIR_OUTPUT: '/var/lib/overleaf/data/output'
