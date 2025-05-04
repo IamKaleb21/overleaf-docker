@@ -10,3 +10,5 @@ var config = {
 };
 
 rs.initiate(config);
+
+print(">>> MongoDB init script executed successfully! <<<");
