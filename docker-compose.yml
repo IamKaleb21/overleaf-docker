@@ -20,6 +20,8 @@ services:
     volumes:
       # Usar un volumen nombrado gestionado por Docker/Coolify para los datos de Overleaf
       - sharelatex_data:/var/lib/overleaf 
+      # --- Línea Añadida ---
+      - /var/run/docker.sock:/var/run/docker.sock # <-- Permite a Overleaf crear contenedores de compilación
     environment:
       OVERLEAF_APP_NAME: 'Overleaf Community Edition'
       # La URL de conexión usa el nombre del servicio 'mongo' y el nombre del replica set
